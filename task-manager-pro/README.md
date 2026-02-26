@@ -24,3 +24,5 @@ This repository uses the recommended structure for a Soroban project:
 // 1: feat: add task detail page with contributor flow
 
 // 2: feat: implement project manager dashboard
+
+// 3: feat: add dark mode with persistent preference
