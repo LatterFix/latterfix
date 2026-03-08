@@ -28,3 +28,5 @@ This repository uses the recommended structure for a Soroban project:
 // 3: feat: add dark mode with persistent preference
 
 // 4: fix: resolve Freighter signing timeout
+
+// 5: feat: add task category tags and filters
