@@ -30,3 +30,5 @@ This repository uses the recommended structure for a Soroban project:
 // 4: fix: resolve Freighter signing timeout
 
 // 5: feat: add task category tags and filters
+
+// 6: feat: implement real-time bid counter
