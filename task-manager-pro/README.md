@@ -32,3 +32,5 @@ This repository uses the recommended structure for a Soroban project:
 // 5: feat: add task category tags and filters
 
 // 6: feat: implement real-time bid counter
+
+// 7: feat: add contributor portfolio page
