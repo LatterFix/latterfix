@@ -34,3 +34,5 @@ This repository uses the recommended structure for a Soroban project:
 // 6: feat: implement real-time bid counter
 
 // 7: feat: add contributor portfolio page
+
+// 8: fix: correct timezone display for deadlines
