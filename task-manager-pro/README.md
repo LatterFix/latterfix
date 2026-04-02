@@ -38,3 +38,5 @@ This repository uses the recommended structure for a Soroban project:
 // 8: fix: correct timezone display for deadlines
 
 // 9: feat: add mobile responsive task board
+
+// 10: chore: update dependencies and fix warnings
