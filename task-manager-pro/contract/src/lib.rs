@@ -155,8 +155,28 @@ impl TaskManagerPro {
         );
     }
 
-    /// View a task 
+    /// View a task
     pub fn get_task(env: Env, task_id: u32) -> Option<Task> {
         env.storage().instance().get(&DataKey::Task(task_id))
+    }
+
+    /// View all tasks (paginated)
+    pub fn get_tasks(env: Env, start_id: u32, limit: u32) -> Vec<Task> {
+        let task_count: u32 = env.storage().instance().get(&DataKey::TaskCount).unwrap_or(0);
+        let mut tasks = Vec::new(&env);
+        let end = (start_id + limit).min(task_count);
+        let mut i = start_id;
+        while i < end {
+            if let Some(task) = env.storage().instance().get::<DataKey, Task>(&DataKey::Task(i)) {
+                tasks.push_back(task);
+            }
+            i += 1;
+        }
+        tasks
+    }
+
+    /// View total task count
+    pub fn get_task_count(env: Env) -> u32 {
+        env.storage().instance().get(&DataKey::TaskCount).unwrap_or(0)
     }
 }

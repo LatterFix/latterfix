@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, MapPin, Clock, Star, ArrowRight, Grid, List } from "lucide-react";
+import { Search, MapPin, Clock, ArrowRight, Grid, List } from "lucide-react";
+import { fetchTaskCount, fetchTasks } from "@/lib/soroban";
 
 // ---------------------------------------------------------------------------
-// Mock bounty data — replace with real contract fetch when integrated
+// Types
 // ---------------------------------------------------------------------------
 interface Bounty {
   id: number;
@@ -24,7 +25,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 1,
     title: "Integrate Stripe Checkout for Pro Plans",
-    description: "Add Stripe checkout flow to the subscription page. Handle webhook events for successful payments and store subscription state in our database.",
+    description:
+      "Add Stripe checkout flow to the subscription page. Handle webhook events for successful payments and store subscription state in our database.",
     reward: 850,
     token: "USDC",
     difficulty: "Medium",
@@ -36,7 +38,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 2,
     title: "Fix memory leak in WebSocket handler",
-    description: "Our production server experiences a gradual memory increase tied to WebSocket connections. Identify and patch the leak in the connection handler.",
+    description:
+      "Our production server experiences a gradual memory increase tied to WebSocket connections. Identify and patch the leak in the connection handler.",
     reward: 1200,
     token: "USDC",
     difficulty: "Hard",
@@ -48,7 +51,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 3,
     title: "Design onboarding flow wireframes",
-    description: "Create wireframes for the new 4-step user onboarding experience. Deliver in Figma with interactive prototypes.",
+    description:
+      "Create wireframes for the new 4-step user onboarding experience. Deliver in Figma with interactive prototypes.",
     reward: 400,
     token: "USDC",
     difficulty: "Easy",
@@ -60,7 +64,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 4,
     title: "Write API documentation for v2 endpoints",
-    description: "Document all new v2 REST endpoints using OpenAPI 3.1 spec. Include request/response examples and error codes.",
+    description:
+      "Document all new v2 REST endpoints using OpenAPI 3.1 spec. Include request/response examples and error codes.",
     reward: 600,
     token: "USDC",
     difficulty: "Medium",
@@ -72,7 +77,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 5,
     title: "Optimize Postgres query for activity feed",
-    description: "The /feed endpoint takes 4s to load for users with >10k followers. Rewrite the query using proper indexes and pagination.",
+    description:
+      "The /feed endpoint takes 4s to load for users with >10k followers. Rewrite the query using proper indexes and pagination.",
     reward: 950,
     token: "USDC",
     difficulty: "Hard",
@@ -84,7 +90,8 @@ const MOCK_BOUNTIES: Bounty[] = [
   {
     id: 6,
     title: "Add dark mode toggle to settings page",
-    description: "Implement a dark/light mode toggle in the user settings. Persist preference in localStorage and respect system preference as default.",
+    description:
+      "Implement a dark/light mode toggle in the user settings. Persist preference in localStorage and respect system preference as default.",
     reward: 200,
     token: "USDC",
     difficulty: "Easy",
@@ -101,12 +108,41 @@ const DIFFICULTY_COLORS = {
   Hard: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
+// ---------------------------------------------------------------------------
+// Bounties Page
+// ---------------------------------------------------------------------------
 export default function BountiesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("All");
+  const [bounties, setBounties] = useState<Bounty[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = MOCK_BOUNTIES.filter((b) => {
+  const loadBounties = useCallback(async () => {
+    setLoading(true);
+    try {
+      const count = await fetchTaskCount();
+      if (count > 0) {
+        const tasks = await fetchTasks(0, count);
+        if (tasks.length > 0) {
+          setBounties(tasks);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to mock data on any error
+    }
+    // Fallback: use mock data when contract is not available
+    setBounties(MOCK_BOUNTIES);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadBounties();
+  }, [loadBounties]);
+
+  const filtered = bounties.filter((b) => {
     const matchesSearch =
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -127,7 +163,9 @@ export default function BountiesPage() {
                 Explore Bounties
               </h1>
               <p className="text-neutral-400 mt-1">
-                {filtered.length} task{filtered.length !== 1 ? "s" : ""} available
+                {loading
+                  ? "Loading..."
+                  : `${filtered.length} task${filtered.length !== 1 ? "s" : ""} available`}
               </p>
             </div>
             <button className="px-6 py-3 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.4)]">
@@ -166,7 +204,9 @@ export default function BountiesPage() {
               <button
                 onClick={() => setViewMode("grid")}
                 className={`p-2.5 transition-colors ${
-                  viewMode === "grid" ? "bg-indigo-600 text-white" : "bg-neutral-900 text-neutral-500 hover:text-white"
+                  viewMode === "grid"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-neutral-900 text-neutral-500 hover:text-white"
                 }`}
               >
                 <Grid className="w-4 h-4" />
@@ -174,7 +214,9 @@ export default function BountiesPage() {
               <button
                 onClick={() => setViewMode("list")}
                 className={`p-2.5 transition-colors ${
-                  viewMode === "list" ? "bg-indigo-600 text-white" : "bg-neutral-900 text-neutral-500 hover:text-white"
+                  viewMode === "list"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-neutral-900 text-neutral-500 hover:text-white"
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -186,11 +228,19 @@ export default function BountiesPage() {
 
       {/* Bounties grid / list */}
       <div className="max-w-7xl mx-auto px-6 py-10">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+            <p className="text-neutral-500 text-sm">Fetching bounties from chain…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-neutral-500 text-lg">No bounties match your search.</p>
             <button
-              onClick={() => { setSearch(""); setSelectedDifficulty("All"); }}
+              onClick={() => {
+                setSearch("");
+                setSelectedDifficulty("All");
+              }}
               className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium"
             >
               Clear filters
@@ -200,7 +250,9 @@ export default function BountiesPage() {
           <motion.div
             initial="hidden"
             animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+            variants={{
+              visible: { transition: { staggerChildren: 0.06 } },
+            }}
             className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
           >
             {filtered.map((bounty) => (
@@ -211,7 +263,9 @@ export default function BountiesPage() {
           <motion.div
             initial="hidden"
             animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
+            variants={{
+              visible: { transition: { staggerChildren: 0.04 } },
+            }}
             className="flex flex-col gap-4"
           >
             {filtered.map((bounty) => (
@@ -224,6 +278,9 @@ export default function BountiesPage() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Bounty Card (grid view)
+// ---------------------------------------------------------------------------
 function BountyCard({ bounty }: { bounty: Bounty }) {
   return (
     <motion.div
@@ -231,12 +288,17 @@ function BountyCard({ bounty }: { bounty: Bounty }) {
         hidden: { opacity: 0, y: 16 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
       }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{
+        y: -4,
+        transition: { duration: 0.2 },
+      }}
       className="group relative flex flex-col rounded-2xl bg-neutral-900/70 border border-neutral-800 p-6 hover:border-indigo-500/50 transition-all cursor-pointer shadow-[0_0_0_1px_rgba(0,0,0,0)] hover:shadow-[0_0_25px_rgba(79,70,229,0.15)]"
     >
       {/* Top row: difficulty badge + posted time */}
       <div className="flex items-center justify-between mb-4">
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${DIFFICULTY_COLORS[bounty.difficulty]}`}>
+        <span
+          className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${DIFFICULTY_COLORS[bounty.difficulty]}`}
+        >
           {bounty.difficulty}
         </span>
         <span className="text-xs text-neutral-500 flex items-center gap-1">
@@ -288,6 +350,9 @@ function BountyCard({ bounty }: { bounty: Bounty }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Bounty List Item (list view)
+// ---------------------------------------------------------------------------
 function BountyListItem({ bounty }: { bounty: Bounty }) {
   return (
     <motion.div
@@ -300,7 +365,9 @@ function BountyListItem({ bounty }: { bounty: Bounty }) {
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1.5">
-          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${DIFFICULTY_COLORS[bounty.difficulty]}`}>
+          <span
+            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${DIFFICULTY_COLORS[bounty.difficulty]}`}
+          >
             {bounty.difficulty}
           </span>
           <span className="text-xs text-neutral-500 flex items-center gap-1">
@@ -315,7 +382,10 @@ function BountyListItem({ bounty }: { bounty: Bounty }) {
         </h3>
         <div className="flex flex-wrap gap-1.5">
           {bounty.tags.map((tag) => (
-            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+            <span
+              key={tag}
+              className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+            >
               {tag}
             </span>
           ))}
@@ -325,7 +395,9 @@ function BountyListItem({ bounty }: { bounty: Bounty }) {
         <p className="font-mono text-sm font-bold text-emerald-400">
           {bounty.reward.toLocaleString()} {bounty.token}
         </p>
-        <p className="text-xs text-neutral-500 mt-0.5">{bounty.applicantCount} applicant{bounty.applicantCount !== 1 ? "s" : ""}</p>
+        <p className="text-xs text-neutral-500 mt-0.5">
+          {bounty.applicantCount} applicant{bounty.applicantCount !== 1 ? "s" : ""}
+        </p>
       </div>
     </motion.div>
   );
