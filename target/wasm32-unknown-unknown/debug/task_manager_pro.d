@@ -1,0 +1,1 @@
+/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/wasm32-unknown-unknown/debug/task_manager_pro.wasm: /home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/contracts/task_manager_pro/src/lib.rs

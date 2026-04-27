@@ -1,0 +1,14 @@
+/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/deps/serde-039cb275e571fe9b.d: /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/build/serde-d37bc533ee22e600/out/private.rs
+
+/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/deps/libserde-039cb275e571fe9b.rlib: /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/build/serde-d37bc533ee22e600/out/private.rs
+
+/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/deps/libserde-039cb275e571fe9b.rmeta: /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/build/serde-d37bc533ee22e600/out/private.rs
+
+/home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/idealz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/build/serde-d37bc533ee22e600/out/private.rs:
+
+# env-dep:OUT_DIR=/home/idealz/Latterfix-Orgs/Latterfix/task_manager/task-manager-pro/target/debug/build/serde-d37bc533ee22e600/out
