@@ -1,0 +1,21 @@
+# Exclude all Makefiles and build configurations from GitHub Language stats
+*Makefile* linguist-detectable=false
+**/*Makefile* linguist-detectable=false
+**/makefile* linguist-detectable=false
+**/*.mk linguist-detectable=false
+
+# Exclude submodules and third-party libraries (e.g. forge-std)
+lib/** linguist-vendored
+lib/forge-std/** linguist-vendored
+
+# Exclude test snapshots and build directories
+contract/test_snapshots/** linguist-vendored
+backend/node_modules/** linguist-vendored
+frontend/node_modules/** linguist-vendored
+target/** linguist-vendored
+.next/** linguist-vendored
+
+# Explicitly mark Rust and TypeScript source code as first-class citizens
+*.rs linguist-detectable=true
+*.ts linguist-detectable=true
+*.tsx linguist-detectable=true
