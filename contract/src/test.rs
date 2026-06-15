@@ -1,119 +1,166 @@
 #![cfg(test)]
 
 use super::*;
-use soroban_sdk::{Env, String, Address, vec, symbol_short, testutils::Address as _};
-use soroban_token_sdk::testutils::Token;
+use soroban_sdk::{Env, String, Address, vec, testutils::Address as _};
 
-#[test]
-fn test_initialize_with_token() {
-    let env = Env::default();
+fn setup_test_env(env: &Env) -> (Address, Address, Address, Address, TaskManagerProClient<'static>) {
     let contract_id = env.register_contract(None, TaskManagerPro);
-    let client = TaskManagerProClient::new(&env, &contract_id);
+    let client = TaskManagerProClient::new(env, &contract_id);
     
-    // Create Stellar token (USDC)
-    let token_admin = Address::generate(&env);
-    let (token_id, token_client) = Token::create_stellar_token(&env, &token_admin);
+    let admin = Address::generate(env);
+    let fee_recipient = Address::generate(env);
+    let token_admin = Address::generate(env);
     
-    let admin = Address::generate(&env);
-    client.initialize(&admin, &250, &token_id);
+    // Register Stellar mock token
+    let token_address = env.register_stellar_asset_contract(token_admin.clone());
     
-    // Verify token contract is stored
-    let stored_token = client.get_token_contract();
-    assert_eq!(stored_token, token_id);
+    env.mock_all_auths();
+
+    // Initialize TaskManagerPro contract with 2.5% platform fee (250 BPS)
+    client.initialize(&admin, &250, &token_address, &fee_recipient);
     
-    println!("✅ Stellar token integration working!");
+    (admin, fee_recipient, token_address, contract_id, client)
 }
 
 #[test]
-fn test_create_task_with_token() {
+fn test_initialization() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, TaskManagerPro);
-    let client = TaskManagerProClient::new(&env, &contract_id);
+    let (admin, fee_recipient, token_address, _, client) = setup_test_env(&env);
     
-    // Setup
-    let token_admin = Address::generate(&env);
-    let (token_id, _) = Token::create_stellar_token(&env, &token_admin);
-    
-    let admin = Address::generate(&env);
-    client.initialize(&admin, &250, &token_id);
-    
-    // Create task
-    let creator = Address::generate(&env);
-    let title = String::from_str(&env, "Audit Smart Contract");
-    let description = String::from_str(&env, "Need security audit for DeFi protocol");
-    let tags = vec![&env, String::from_str(&env, "defi"), String::from_str(&env, "security")];
-    
-    let task_id = client.create_task(
-        &creator, 
-        &title, 
-        &description, 
-        &10000, 
-        &symbol_short!("USDC"),
-        &None, 
-        &tags
-    );
-    
-    assert_eq!(task_id, 0);
-    println!("✅ Task created with Stellar token!");
+    assert_eq!(client.get_admin().unwrap(), admin);
+    assert_eq!(client.get_token_contract().unwrap(), token_address);
+    assert_eq!(client.get_platform_fee(), 250);
+    assert_eq!(client.get_fee_recipient().unwrap(), fee_recipient);
+    assert_eq!(client.get_task_count(), 0);
 }
 
 #[test]
-fn test_fund_task_with_tokens() {
+fn test_create_and_complete_task_flow() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, TaskManagerPro);
-    let client = TaskManagerProClient::new(&env, &contract_id);
-    
-    // Setup token
-    let token_admin = Address::generate(&env);
-    let (token_id, token_client) = Token::create_stellar_token(&env, &token_admin);
-    
-    let admin = Address::generate(&env);
-    client.initialize(&admin, &250, &token_id);
-    
-    // Create task
-    let creator = Address::generate(&env);
-    let title = String::from_str(&env, "Audit Task");
-    let description = String::from_str(&env, "Need audit");
-    let tags = vec![&env, String::from_str(&env, "test")];
-    
-    let task_id = client.create_task(
-        &creator, 
-        &title, 
-        &description, 
-        &5000, 
-        &symbol_short!("USDC"),
-        &None, 
-        &tags
-    );
-    
-    // Fund the task (simulate having USDC)
-    let funder = Address::generate(&env);
-    
-    // Mock token transfer (in real test, would mint tokens first)
     env.mock_all_auths();
     
-    let result = std::panic::catch_unwind(|| {
-        client.fund_task(&funder, &task_id);
-    });
+    let (admin, fee_recipient, token_address, contract_id, client) = setup_test_env(&env);
+    let token_client = token::Client::new(&env, &token_address);
     
-    // This will panic in test without proper token setup
-    // In production, this would work with actual tokens
+    // Fetch token admin to create a StellarAssetClient for minting
+    // We register the asset admin client to mint
+    let token_admin_client = soroban_sdk::token::StellarAssetClient::new(&env, &token_address);
     
-    println!("✅ Demonstrate Stellar token funding flow");
+    let creator = Address::generate(&env);
+    let assignee = Address::generate(&env);
+    
+    // Mint tokens to creator so they can fund the task
+    let reward = 10000i128;
+    token_admin_client.mint(&creator, &reward);
+    assert_eq!(token_client.balance(&creator), reward);
+    
+    // Create Task
+    let title = String::from_str(&env, "Build stellar UI");
+    let description = String::from_str(&env, "Integrate freighter wallet interface.");
+    let tags = vec![&env, String::from_str(&env, "stellar"), String::from_str(&env, "nextjs")];
+    
+    let task_id = client.create_task(&creator, &title, &description, &reward, &tags);
+    assert_eq!(task_id, 0);
+    
+    // Creator funds are locked inside the escrow (contract)
+    assert_eq!(token_client.balance(&creator), 0);
+    assert_eq!(token_client.balance(&contract_id), reward);
+    
+    // Assign Task
+    client.assign_task(&assignee, &task_id);
+    let task = client.get_task(&task_id).unwrap();
+    assert_eq!(task.status, TaskStatus::InProgress);
+    assert_eq!(task.assignee.unwrap(), assignee);
+    
+    // Submit Work
+    client.submit_work(&assignee, &task_id, &String::from_str(&env, "http://github.com/pr/1"));
+    let task_after_submission = client.get_task(&task_id).unwrap();
+    assert_eq!(task_after_submission.status, TaskStatus::Completed);
+    
+    // Complete Task (Verifying payout and fee cut)
+    client.complete_task(&admin, &task_id);
+    
+    // 2.5% fee of 10000 = 250
+    // Assignee receives 9750
+    // Fee recipient receives 250
+    assert_eq!(token_client.balance(&assignee), 9750);
+    assert_eq!(token_client.balance(&fee_recipient), 250);
+    assert_eq!(token_client.balance(&contract_id), 0);
+    
+    let finished_task = client.get_task(&task_id).unwrap();
+    assert_eq!(finished_task.status, TaskStatus::Verified);
 }
 
 #[test]
-fn test_stellar_path_payment_concept() {
+fn test_cancel_task_refund() {
     let env = Env::default();
+    env.mock_all_auths();
     
-    // This demonstrates Stellar's unique path payment feature
-    println!("\n📡 Stellar Path Payment Demonstration:");
-    println!("   US Payer pays in USDC");
-    println!("   → Stellar DEX converts");
-    println!("   European auditor receives EURC");
-    println!("   ⚡ Settlement: 5 seconds");
-    println!("   💰 Fee: $0.00001");
-    println!("   ✅ No manual exchange needed!\n");
+    let (_, _, token_address, contract_id, client) = setup_test_env(&env);
+    let token_client = token::Client::new(&env, &token_address);
+    let token_admin_client = soroban_sdk::token::StellarAssetClient::new(&env, &token_address);
     
-    assert!(true);
+    let creator = Address::generate(&env);
+    let reward = 5000i128;
+    token_admin_client.mint(&creator, &reward);
+    
+    let title = String::from_str(&env, "Simple Design Task");
+    let description = String::from_str(&env, "Figma design required.");
+    let tags = vec![&env, String::from_str(&env, "design")];
+    
+    let task_id = client.create_task(&creator, &title, &description, &reward, &tags);
+    assert_eq!(token_client.balance(&contract_id), reward);
+    
+    // Cancel Task and verify refund
+    client.cancel_task(&creator, &task_id);
+    
+    assert_eq!(token_client.balance(&creator), reward);
+    assert_eq!(token_client.balance(&contract_id), 0);
+    
+    let task = client.get_task(&task_id).unwrap();
+    assert_eq!(task.status, TaskStatus::Cancelled);
+}
+
+#[test]
+fn test_dispute_and_resolution() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let (admin, fee_recipient, token_address, contract_id, client) = setup_test_env(&env);
+    let token_client = token::Client::new(&env, &token_address);
+    let token_admin_client = soroban_sdk::token::StellarAssetClient::new(&env, &token_address);
+    
+    let creator = Address::generate(&env);
+    let assignee = Address::generate(&env);
+    let reward = 20000i128;
+    token_admin_client.mint(&creator, &reward);
+    
+    let task_id = client.create_task(
+        &creator, 
+        &String::from_str(&env, "Disputed Bounty"), 
+        &String::from_str(&env, "Will raise a dispute."), 
+        &reward, 
+        &vec![&env]
+    );
+    
+    client.assign_task(&assignee, &task_id);
+    
+    // Creator disputes active task
+    client.dispute_task(&creator, &task_id);
+    let task = client.get_task(&task_id).unwrap();
+    assert_eq!(task.status, TaskStatus::Disputed);
+    
+    // Admin resolves dispute: 50/50 split (10000 creator refund, 10000 assignee payout)
+    // Assignee receives 10000 minus 2.5% fee (250) = 9750
+    // Fee recipient receives 250
+    // Creator receives 10000 refund
+    client.resolve_dispute(&admin, &task_id, &10000, &10000);
+    
+    assert_eq!(token_client.balance(&creator), 10000);
+    assert_eq!(token_client.balance(&assignee), 9750);
+    assert_eq!(token_client.balance(&fee_recipient), 250);
+    assert_eq!(token_client.balance(&contract_id), 0);
+    
+    let task_resolved = client.get_task(&task_id).unwrap();
+    assert_eq!(task_resolved.status, TaskStatus::Verified);
 }
