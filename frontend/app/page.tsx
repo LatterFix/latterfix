@@ -1,5 +1,7 @@
 import Hero from "./components/Hero";
 import Features from "./components/Features";
+import BountiesPreview from "./components/BountiesPreview";
+import CallToAction from "./components/CallToAction";
 
 export default function Home() {
   return (
@@ -9,7 +11,9 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-start w-full">
         <Hero />
+        <BountiesPreview />
         <Features />
+        <CallToAction />
       </main>
     </>
   );
