@@ -1,42 +1,330 @@
-import { ExternalLink } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { ExternalLink, Plus, RefreshCw, Send, CheckCircle, UserPlus } from "lucide-react";
+
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  reward: string;
+  token: string;
+  status: string;
+  assignee: string | null;
+  creator: string;
+  submission: string | null;
+  tags: string[];
+}
 
 export default function BountiesPreview() {
-  const bounties = [
-    { title: "Implement Freighter Wallet SDK", amount: "500 USDC", tags: ["Frontend", "React"] },
-    { title: "Write Soroban Tests for Escrow", amount: "1,200 XLM", tags: ["Rust", "Smart Contract"] },
-    { title: "Design Landing Page Assets", amount: "300 USDC", tags: ["Design", "Figma"] }
-  ];
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [wallet, setWallet] = useState<string | null>(null);
+  
+  // Form state
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [reward, setReward] = useState("");
+  const [token, setToken] = useState("USDC");
+  const [tags, setTags] = useState("");
+
+  // Submission modal state
+  const [activeSubmitTaskId, setActiveSubmitTaskId] = useState<number | null>(null);
+  const [submissionLink, setSubmissionLink] = useState("");
+
+  const backendUrl = "http://localhost:3001";
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/tasks`);
+      const data = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const connectWallet = () => {
+    // Simulated Freighter integration
+    const mockAddress = "GC" + Math.random().toString(36).substring(2, 12).toUpperCase() + "TaskManagerPro";
+    setWallet(mockAddress);
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wallet) return alert("Please connect wallet first");
+    
+    try {
+      const res = await fetch(`${backendUrl}/api/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          reward,
+          token,
+          creator: wallet,
+          tags: tags.split(",").map(t => t.trim())
+        })
+      });
+
+      if (res.ok) {
+        setShowForm(false);
+        setTitle("");
+        setDescription("");
+        setReward("");
+        setTags("");
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleClaim = async (id: number) => {
+    if (!wallet) return alert("Please connect wallet to claim tasks");
+    try {
+      const res = await fetch(`${backendUrl}/api/tasks/${id}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignee: wallet })
+      });
+      if (res.ok) fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSubmitWork = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeSubmitTaskId) return;
+
+    try {
+      const res = await fetch(`${backendUrl}/api/tasks/${activeSubmitTaskId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submission: submissionLink })
+      });
+      if (res.ok) {
+        setActiveSubmitTaskId(null);
+        setSubmissionLink("");
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVerify = async (id: number) => {
+    // In a real flow, a Soroban transaction is checked. 
+    // We send a mock txHash verifying Stellar Horizon ledger execution.
+    const mockTxHash = "5a7b..." + Math.random().toString(16).substring(2, 10);
+    try {
+      const res = await fetch(`${backendUrl}/api/tasks/${id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txHash: mockTxHash })
+      });
+      if (res.ok) fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
-    <section className="w-full py-20 bg-neutral-950/50 border-y border-white/5 z-10">
+    <section id="escrow" className="w-full py-20 bg-neutral-950/50 border-y border-white/5 z-10">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="flex justify-between items-end mb-12">
+        
+        {/* Wallet Status Banner */}
+        <div className="flex flex-col sm:flex-row justify-between items-center bg-neutral-900 border border-indigo-500/20 rounded-2xl p-6 mb-12 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Live Bounties</h2>
-            <p className="text-neutral-400">Earn crypto directly to your Stellar wallet.</p>
+            <h3 className="font-bold text-white text-lg">Stellar Account Connection</h3>
+            <p className="text-sm text-neutral-400">
+              {wallet ? `Connected: ${wallet.substring(0, 10)}...${wallet.substring(wallet.length - 8)}` : "Freighter Wallet not connected"}
+            </p>
           </div>
-          <button className="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-2">
-            View All <ExternalLink className="w-4 h-4" />
+          <button 
+            onClick={connectWallet}
+            className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition-all text-sm"
+          >
+            {wallet ? "Connected" : "Simulate Wallet Connection"}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {bounties.map((b, i) => (
-            <div key={i} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/50 transition-all cursor-pointer group">
-              <div className="flex justify-between items-start mb-4">
-                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full">
-                  {b.amount}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-4 group-hover:text-indigo-300 transition-colors">{b.title}</h3>
-              <div className="flex gap-2">
-                {b.tags.map(t => (
-                  <span key={t} className="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded-md">{t}</span>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">Live Bounties & Tasks</h2>
+            <p className="text-neutral-400">Claim tasks, submit your work, and get paid instantly in decentralized escrows.</p>
+          </div>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setShowForm(!showForm)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 flex items-center gap-2 text-sm font-semibold transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Create Bounty
+            </button>
+            <button 
+              onClick={fetchTasks}
+              className="p-2 border border-neutral-800 rounded-xl hover:bg-neutral-900 text-neutral-400 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Task Creation Form */}
+        {showForm && (
+          <form onSubmit={handleCreateTask} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 mb-8 max-w-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Create New Stellar Escrowed Bounty</h3>
+            <div className="grid grid-cols-1 gap-4 mb-4">
+              <input 
+                type="text" 
+                placeholder="Task Title" 
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+              />
+              <textarea 
+                placeholder="Task Description" 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                className="bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 h-28"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="number" 
+                  placeholder="Reward Amount" 
+                  value={reward} 
+                  onChange={(e) => setReward(e.target.value)}
+                  required
+                  className="bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+                />
+                <select 
+                  value={token} 
+                  onChange={(e) => setToken(e.target.value)}
+                  className="bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="USDC">USDC</option>
+                  <option value="XLM">XLM</option>
+                </select>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Tags (comma separated, e.g. Frontend, React)" 
+                value={tags} 
+                onChange={(e) => setTags(e.target.value)}
+                className="bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold">
+              Fund & Launch Bounty
+            </button>
+          </form>
+        )}
+
+        {/* Task List Grid */}
+        {loading ? (
+          <div className="text-center py-12 text-neutral-400">Loading dynamic escrows...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {tasks.map((task) => (
+              <div key={task.id} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between group">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full">
+                      {task.reward} {task.token}
+                    </span>
+                    <span className={`text-xs px-2.5 py-1 rounded-md font-semibold ${
+                      task.status === "Open" ? "bg-emerald-500/10 text-emerald-400" :
+                      task.status === "InProgress" ? "bg-amber-500/10 text-amber-400" :
+                      task.status === "Completed" ? "bg-indigo-500/10 text-indigo-400" :
+                      "bg-neutral-800 text-neutral-400"
+                    }`}>
+                      {task.status}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">{task.title}</h3>
+                  <p className="text-neutral-400 text-sm mb-4 line-clamp-3">{task.description}</p>
+                </div>
+
+                <div>
+                  <div className="flex gap-1.5 flex-wrap mb-4">
+                    {task.tags.map(t => (
+                      <span key={t} className="text-xs text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded-md">{t}</span>
+                    ))}
+                  </div>
+
+                  {/* Actions based on task status */}
+                  {task.status === "Open" && (
+                    <button 
+                      onClick={() => handleClaim(task.id)}
+                      className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <UserPlus className="w-4 h-4" /> Claim Bounty
+                    </button>
+                  )}
+
+                  {task.status === "InProgress" && (
+                    <div>
+                      {activeSubmitTaskId === task.id ? (
+                        <form onSubmit={handleSubmitWork} className="mt-2">
+                          <input 
+                            type="text" 
+                            placeholder="Link to delivery (e.g. GitHub PR)" 
+                            value={submissionLink}
+                            onChange={(e) => setSubmissionLink(e.target.value)}
+                            required
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white mb-2 focus:outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button type="submit" className="flex-1 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-1">
+                              <Send className="w-3.5 h-3.5" /> Send
+                            </button>
+                            <button type="button" onClick={() => setActiveSubmitTaskId(null)} className="py-1.5 px-3 bg-neutral-850 text-neutral-400 rounded-lg text-xs hover:bg-neutral-800">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <button 
+                          onClick={() => setActiveSubmitTaskId(task.id)}
+                          className="w-full py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Send className="w-4 h-4" /> Submit Work
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {task.status === "Completed" && (
+                    <button 
+                      onClick={() => handleVerify(task.id)}
+                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Verify & Release Escrow
+                    </button>
+                  )}
+
+                  {task.status === "Verified" && (
+                    <div className="text-center text-xs text-neutral-500 font-medium py-2">
+                      🎉 Payout Distributed on Stellar
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
