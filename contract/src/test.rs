@@ -164,3 +164,39 @@ fn test_dispute_and_resolution() {
     let task_resolved = client.get_task(&task_id).unwrap();
     assert_eq!(task_resolved.status, TaskStatus::Verified);
 }
+
+#[test]
+fn test_user_profile_lifecycle() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let user = Address::generate(&env);
+    let admin = Address::generate(&env);
+    
+    // Register UserProfileManager contract
+    let contract_id = env.register_contract(None, user_profile::UserProfileManager);
+    let client = user_profile::UserProfileManagerClient::new(&env, &contract_id);
+    
+    // Create profile
+    let username = String::from_str(&env, "stellar_dev");
+    let bio = String::from_str(&env, "Soroban Smart Contract Developer");
+    client.create_profile(&user, &username, &bio);
+    
+    // Retrieve profile and verify details
+    let profile = client.get_profile(&user).unwrap();
+    assert_eq!(profile.username, username);
+    assert_eq!(profile.bio, bio);
+    assert_eq!(profile.reputation, 100);
+    assert_eq!(profile.completed_tasks, 0);
+    
+    // Update bio
+    let new_bio = String::from_str(&env, "Expert Rust & Soroban Engineer");
+    client.update_bio(&user, &new_bio);
+    assert_eq!(client.get_profile(&user).unwrap().bio, new_bio);
+    
+    // Reward contribution (reputation increment)
+    client.reward_contribution(&admin, &user, &50);
+    let updated = client.get_profile(&user).unwrap();
+    assert_eq!(updated.reputation, 150);
+    assert_eq!(updated.completed_tasks, 1);
+}

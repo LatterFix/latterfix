@@ -324,5 +324,7 @@ impl TaskManagerPro {
     }
 }
 
+pub mod user_profile;
+
 #[cfg(test)]
 mod test;
